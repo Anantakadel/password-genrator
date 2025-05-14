@@ -23,7 +23,7 @@ def encrypt(text, cipher):
 def decrypt(text, cipher):
     return cipher.decrypt(text.encode()).decode()
 
-# Generating random password
+# Generate random password
 def generate_password(length=10):
     return ''.join(secrets.choice(string.ascii_letters + string.digits + string.punctuation) for _ in range(length))
 
@@ -36,7 +36,7 @@ def init_db():
                             username TEXT,
                             password TEXT)''')
 
-# Add a password
+# Add password
 def add_password(service, username, password, cipher):
     encrypted_password = encrypt(password, cipher)
     with sqlite3.connect(DB_FILE) as conn:
@@ -49,6 +49,19 @@ def retrieve_password(service, cipher):
         rows = conn.execute('SELECT username, password FROM passwords WHERE service = ?', (service,)).fetchall()
     return [(row[0], decrypt(row[1], cipher)) for row in rows] if rows else []
 
+# Modify password
+def modify_password(service, username, new_password, cipher):
+    encrypted_password = encrypt(new_password, cipher)
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.execute('UPDATE passwords SET password = ? WHERE service = ? AND username = ?',
+                     (encrypted_password, service, username))
+
+# Delete password
+def delete_password(service, username):
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.execute('DELETE FROM passwords WHERE service = ? AND username = ?',
+                     (service, username))
+
 # Main program
 def main():
     cipher = Fernet(load_key())
@@ -58,7 +71,9 @@ def main():
         print("\n1. Add password")
         print("2. Retrieve password")
         print("3. Generate password")
-        print("4. Exit")
+        print("4. Modify password")
+        print("5. Delete password")
+        print("6. Exit")
         choice = input("Enter your choice: ")
 
         if choice == "1":
@@ -66,7 +81,7 @@ def main():
             username = input("Enter the username: ")
             password = input("Enter the password: ")
             add_password(service, username, password, cipher)
-            print("🔥 Password added successfully!")
+            print("✅ Password added successfully!")
 
         elif choice == "2":
             service = input("Enter the service to retrieve password: ")
@@ -79,9 +94,22 @@ def main():
 
         elif choice == "3":
             length = int(input("Enter password length: "))
-            print("💥 Generated password:", generate_password(length))
+            print("⚡ Generated password:", generate_password(length))
 
         elif choice == "4":
+            service = input("Enter the service: ")
+            username = input("Enter the username: ")
+            new_password = input("Enter the new password: ")
+            modify_password(service, username, new_password, cipher)
+            print("✏️ Password modified successfully!")
+
+        elif choice == "5":
+            service = input("Enter the service: ")
+            username = input("Enter the username: ")
+            delete_password(service, username)
+            print("🗑️ Password deleted successfully!")
+
+        elif choice == "6":
             print("👋 Exiting...")
             break
 
